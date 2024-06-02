@@ -39,6 +39,28 @@ const corsOptions = {
         const result = await houseCollection.find().toArray();
         res.send(result);
       });
+    //   get for email
+    app.get("/myaddedhouse/:email",async (req, res) => {
+        const email = req.params.email;
+        let query = {'agent.email': email}
+
+        const result = await houseCollection.find(query).toArray();
+        res.send(result);
+    })
+
+    // delete add properties
+    app.delete("/myaddedhouse/:id", async (req, res) => {
+        const id = req.params.id;
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ error: "Invalid ID format" });
+        }
+        const query = { _id: new ObjectId(id) };
+        const result = await houseCollection.deleteOne(query);
+        if (result.deletedCount === 0) {
+          return res.status(404).send({ error: "User not found" });
+        }
+        res.send(result);
+      });
     //   post property
     app.post("/house",async (req,res)=>{
         const property = req.body;
