@@ -135,6 +135,7 @@ app.put('/user',async (req,res) => {
         const result = await houseCollection.insertOne(property)
         res.send(result)
     })
+    
     //   details for house
      app.get("/house/:id", async (req, res) => {
         const  id  = req.params.id;
@@ -142,10 +143,40 @@ app.put('/user',async (req,res) => {
         const result = await houseCollection.findOne(query);
         res.send(result);
       });
+      // reviews post 
+      app.post("/reviews",async (req,res)=>{
+        const property = req.body;
+        const result = await reviewCollection.insertOne(property)
+        res.send(result)
+    })
 
-    //   reviews
+    //   reviews get
     app.get("/reviews", async (req, res) => {
         const result = await reviewCollection.find().toArray();
+        res.send(result);
+      });
+    //   reviews get last 3
+    app.get("/review", async (req, res) => {
+      try {
+          const result = await reviewCollection.find().sort({ _id: -1 }).limit(3).toArray();
+          res.send(result);
+      } catch (error) {
+          console.error("Failed to retrieve reviews:", error);
+          res.status(500).send("Internal Server Error");
+      }
+  });
+
+      // reviews delte from admin
+      app.delete("/reviews/:id", async (req, res) => {
+        const id = req.params.id;
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ error: "Invalid ID format" });
+        }
+        const query = { _id: new ObjectId(id) };
+        const result = await reviewCollection.deleteOne(query);
+        if (result.deletedCount === 0) {
+          return res.status(404).send({ error: "User not found" });
+        }
         res.send(result);
       });
     
