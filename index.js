@@ -6,7 +6,7 @@ const port = process.env.PORT || 5000
 
 // middleware
 const corsOptions = {
-    origin: [ 'http://localhost:5176'],
+    origin: [ 'http://localhost:5173'],
     credentials: true,
     optionSuccessStatus: 200,
   }
@@ -18,7 +18,7 @@ const corsOptions = {
 
 
 
-  const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+  const { MongoClient, ServerApiVersion, ObjectId, Timestamp } = require('mongodb');
   const uri =`mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ce00xrg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
   
   // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -34,6 +34,74 @@ const corsOptions = {
     try {
      const houseCollection = client.db("realEstatePlatform").collection("house")
      const reviewCollection = client.db("realEstatePlatform").collection("reviews")
+     const userCollection = client.db("realEstatePlatform").collection("users")
+
+    //  get user info by email
+    app.get("/user/:email",async (req,res) => {
+      const email=req.params.email
+      const result = await userCollection.findOne({email})
+      res.send(result)
+    })
+    //  save user data in db
+app.put('/user',async (req,res) => {
+    const user = req.body;
+    const query = {email:user?.email}
+    const isExist =  await userCollection.findOne(query);
+    if (isExist) {
+      if (user.status === 'Requested') {
+        // if existing user try to change his role
+        const result = await userCollection.updateOne(query, {
+          $set: { status: user?.status },
+        })
+        return res.send(result)
+      } else {
+        // if existing user login again
+        return res.send(isExist)
+      }
+    }
+    // save user 1st time
+    const option = {upsert:true}
+    
+    const updateDoc = {
+        $set:{
+            ...user,
+            Timestamp:Date.now(),
+        },
+    }
+    const result = await userCollection.updateOne(query, updateDoc,option)
+})
+
+ // get all users data from db
+ app.get('/users', async (req, res) => {
+    const result = await userCollection.find().toArray()
+    res.send(result)
+  })
+
+
+    //update a user role
+    app.patch('/users/update/:email', async (req, res) => {
+      const email = req.params.email
+      const user = req.body
+      const query = { email }
+      const updateDoc = {
+        $set: { ...user, timestamp: Date.now() },
+      }
+      const result = await userCollection.updateOne(query, updateDoc)
+      res.send(result)
+    })
+    // delte admin can 
+    app.delete("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).send({ error: "Invalid ID format" });
+      }
+      const query = { _id: new ObjectId(id) };
+      const result = await userCollection.deleteOne(query);
+      if (result.deletedCount === 0) {
+        return res.status(404).send({ error: "User not found" });
+      }
+      res.send(result);
+    });
 // get all house
      app.get("/house", async (req, res) => {
         const result = await houseCollection.find().toArray();
