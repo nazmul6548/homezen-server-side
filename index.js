@@ -6,7 +6,7 @@ const port = process.env.PORT || 5000
 
 // middleware
 const corsOptions = {
-    origin: [ 'http://localhost:5173'],
+    origin: [ 'http://localhost:5176'],
     credentials: true,
     optionSuccessStatus: 200,
   }
@@ -179,6 +179,16 @@ app.put('/user',async (req,res) => {
         }
         res.send(result);
       });
+
+
+      // get reviews which user add
+      app.get("/reviews/:email",async (req, res) => {
+        const email = req.params.email;
+        let query = {'reviewerEmail': email}
+
+        const result = await reviewCollection.find(query).toArray();
+        res.send(result);
+    })
     
     //   await client.db("admin").command({ ping: 1 });
       console.log("Pinged your deployment. You successfully connected to MongoDB!");
