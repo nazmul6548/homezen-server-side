@@ -6,7 +6,7 @@ const port = process.env.PORT || 5000
 
 // middleware
 const corsOptions = {
-    origin: [ 'http://localhost:5176'],
+    origin: [ 'http://localhost:5175'],
     credentials: true,
     optionSuccessStatus: 200,
   }
@@ -35,7 +35,14 @@ const corsOptions = {
      const houseCollection = client.db("realEstatePlatform").collection("house")
      const reviewCollection = client.db("realEstatePlatform").collection("reviews")
      const userCollection = client.db("realEstatePlatform").collection("users")
-
+     const wishlistCollection = client.db("realEstatePlatform").collection("wishlist")
+// 
+// wishlist collection
+app.post("/wishlist",async (req,res)=>{
+  const property = req.body;
+  const result = await wishlistCollection.insertOne(property)
+  res.send(result)
+})
     //  get user info by email
     app.get("/user/:email",async (req,res) => {
       const email=req.params.email
@@ -189,6 +196,19 @@ app.put('/user',async (req,res) => {
         const result = await reviewCollection.find(query).toArray();
         res.send(result);
     })
+     // delete add review 
+     app.delete("/review/:id", async (req, res) => {
+      const id = req.params.id;
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).send({ error: "Invalid ID format" });
+      }
+      const query = { _id: new ObjectId(id) };
+      const result = await reviewCollection.deleteOne(query);
+      if (result.deletedCount === 0) {
+        return res.status(404).send({ error: "User not found" });
+      }
+      res.send(result);
+    });
     
     //   await client.db("admin").command({ ping: 1 });
       console.log("Pinged your deployment. You successfully connected to MongoDB!");
