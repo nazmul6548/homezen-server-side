@@ -1,24 +1,40 @@
 const express = require('express')
-const app = express()
 require('dotenv').config()
 const cors = require('cors')
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser');
+const app = express()
+const { MongoClient, ServerApiVersion, ObjectId, Timestamp } = require('mongodb');
 const port = process.env.PORT || 5000
-
 // middleware
 const corsOptions = {
-    origin: [ 'http://localhost:5173'],
+    origin: [ 'http://localhost:5177'],
     credentials: true,
     optionSuccessStatus: 200,
   }
   app.use(cors(corsOptions))
   
   app.use(express.json())
-//   app.use(cookieParser())
+  app.use(cookieParser())
   
+// Verify Token Middleware
+const verifyToken = async (req, res, next) => {
+  const token = req.cookies?.token
+  console.log(token)
+  if (!token) {
+    return res.status(401).send({ message: 'unauthorized access' })
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      console.log(err)
+      return res.status(401).send({ message: 'unauthorized access' })
+    }
+    req.user = decoded
+    next()
+  })
+}
 
-
-
-  const { MongoClient, ServerApiVersion, ObjectId, Timestamp } = require('mongodb');
+  
   const uri =`mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ce00xrg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
   
   // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -34,23 +50,79 @@ const corsOptions = {
     try {
      const houseCollection = client.db("realEstatePlatform").collection("house")
      const reviewCollection = client.db("realEstatePlatform").collection("reviews")
-     const userCollection = client.db("realEstatePlatform").collection("users")
      const wishlistCollection = client.db("realEstatePlatform").collection("wishlist")
+     const userCollection = client.db("realEstatePlatform").collection("users")
 // 
-// wishlist collection
-app.post("/wishlist",async (req,res)=>{
-  const property = req.body;
-  const result = await wishlistCollection.insertOne(property)
-  res.send(result)
-})
-// get wishlist data
-app.get("/wishlist/:email",async (req, res) => {
-  const email = req.params.email;
-  let query = {'buyeremail': email}
+// verify admin
+// const verifyAdmin = async (req, res, next) => {
+//   console.log('hello')
+//   const user = req.user
+//   const query = { email: user?.email }
+//   const result = await userCollection.findOne(query)
+//   console.log(result?.role)
+//   if (!result || result?.role !== 'admin')
+//     return res.status(401).send({ message: 'unauthorized access!!' })
 
+//   next()
+// }
+// 
+// 
+  // auth related api
+  // app.post('/jwt', async (req, res) => {
+  //   const user = req.body
+  //   const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+  //     expiresIn: '365d',
+  //   })
+  //   res
+  //     .cookie('token', token, {
+  //       httpOnly: true,
+  //       secure: process.env.NODE_ENV === 'production',
+  //       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+  //     })
+  //     .send({ success: true })
+  // })
+  // // Logout
+  // app.get('/logout', async (req, res) => {
+  //   try {
+  //     res
+  //       .clearCookie('token', {
+  //         maxAge: 0,
+  //         secure: process.env.NODE_ENV === 'production',
+  //         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+  //       })
+  //       .send({ success: true })
+  //     console.log('Logout successful')
+  //   } catch (err) {
+  //     res.status(500).send(err)
+  //   }
+  // })
+// 
+// 
+// app.get('/wishlist', async (req, res) => {
+//   const result = await wishlistCollection.find().toArray()
+//   res.send(result)
+// })
+// wishlist update
+app.get("/wishlist/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await wishlistCollection.findOne(query); 
+  res.send(result);
+});
+
+// wishlist collection
+app.post("/wishlist", async (req, res) => {
+  const property = req.body;
+  const result = await wishlistCollection.insertOne(property);
+  res.send(result);
+});
+// get wishlist data
+app.get("/wishlist/email/:email", async (req, res) => {
+  const email = req.params.email;
+  const query = { 'buyeremail': email };
   const result = await wishlistCollection.find(query).toArray();
   res.send(result);
-})
+});
 // wishlist delte for user wishlist
 app.delete("/wishlist/:id", async (req, res) => {
   const id = req.params.id;
@@ -97,6 +169,7 @@ app.put('/user',async (req,res) => {
         },
     }
     const result = await userCollection.updateOne(query, updateDoc,option)
+    res.send(result)
 })
 
  // get all users data from db
@@ -135,6 +208,46 @@ app.put('/user',async (req,res) => {
         const result = await houseCollection.find().toArray();
         res.send(result);
       });
+      // petch for update
+      app.patch('/house/:id', async (req, res) => {
+        try {
+            const id = req.params.id;
+            const update = req.body;
+    
+            // Construct the filter to identify the document to update
+            const filter = { _id: new ObjectId(id) };
+    
+            // Construct the update operation using $set
+            const updatedDoc = {
+                $set: update
+            };
+    
+            // Execute the update operation
+            const result = await houseCollection.updateOne(filter, updatedDoc);
+    
+            // Check if the document was found and updated successfully
+            if (result.matchedCount && result.modifiedCount) {
+                // Send a success response back to the client
+                res.status(200).send({ message: 'updated successfully.', modifiedCount: result.modifiedCount });
+            } else {
+                // If the document was not found or not updated, send an appropriate error response
+                res.status(404).send({ message: ' not found or not updated.' });
+            }
+        } catch (error) {
+            // Handle any errors that occur during the update operation
+            console.error('Error updating house:', error);
+            res.status(500).send({ message: 'Internal server error.' });
+        }
+    });
+  
+      // update agent property
+      app.get("/house/:id", async (req, res) => {
+        const id = req.params.id;
+        // console.log(id);
+        const query = { _id: new ObjectId(id) };
+        const result = await houseCollection.findOne(query); 
+        res.send(result);
+      });
     //   get for email
     app.get("/myaddedhouse/:email",async (req, res) => {
         const email = req.params.email;
@@ -143,7 +256,18 @@ app.put('/user',async (req,res) => {
         const result = await houseCollection.find(query).toArray();
         res.send(result);
     })
+// update housse
+// app.get("/house/:id", async (req, res) => {
+//   const id = req.params.id;
 
+
+//   const query = { _id: new ObjectId(id) };
+  
+//     const result = await houseCollection.findOne(query);
+    
+//     res.send(result);
+  
+// });
     // delete add properties
     app.delete("/myaddedhouse/:id", async (req, res) => {
         const id = req.params.id;
