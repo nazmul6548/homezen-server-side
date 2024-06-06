@@ -6,7 +6,7 @@ const port = process.env.PORT || 5000
 
 // middleware
 const corsOptions = {
-    origin: [ 'http://localhost:5175'],
+    origin: [ 'http://localhost:5173'],
     credentials: true,
     optionSuccessStatus: 200,
   }
@@ -43,6 +43,27 @@ app.post("/wishlist",async (req,res)=>{
   const result = await wishlistCollection.insertOne(property)
   res.send(result)
 })
+// get wishlist data
+app.get("/wishlist/:email",async (req, res) => {
+  const email = req.params.email;
+  let query = {'buyeremail': email}
+
+  const result = await wishlistCollection.find(query).toArray();
+  res.send(result);
+})
+// wishlist delte for user wishlist
+app.delete("/wishlist/:id", async (req, res) => {
+  const id = req.params.id;
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ error: "Invalid ID format" });
+  }
+  const query = { _id: new ObjectId(id) };
+  const result = await wishlistCollection.deleteOne(query);
+  if (result.deletedCount === 0) {
+    return res.status(404).send({ error: "User not found" });
+  }
+  res.send(result);
+});
     //  get user info by email
     app.get("/user/:email",async (req,res) => {
       const email=req.params.email
