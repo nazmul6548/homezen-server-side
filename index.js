@@ -52,6 +52,7 @@ const verifyToken = async (req, res, next) => {
      const reviewCollection = client.db("realEstatePlatform").collection("reviews")
      const wishlistCollection = client.db("realEstatePlatform").collection("wishlist")
      const userCollection = client.db("realEstatePlatform").collection("users")
+     const offerdCollection = client.db("realEstatePlatform").collection("offerd")
 // 
 // verify admin
 // const verifyAdmin = async (req, res, next) => {
@@ -102,6 +103,12 @@ const verifyToken = async (req, res, next) => {
 //   const result = await wishlistCollection.find().toArray()
 //   res.send(result)
 // })
+// offfer post
+app.post("/offerd",async (req,res)=>{
+  const property = req.body;
+  const result = await offerdCollection.insertOne(property)
+  res.send(result)
+})
 // wishlist update
 app.get("/wishlist/:id", async (req, res) => {
   const id = req.params.id;
