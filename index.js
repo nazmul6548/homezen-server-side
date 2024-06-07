@@ -103,10 +103,30 @@ const verifyToken = async (req, res, next) => {
 //   const result = await wishlistCollection.find().toArray()
 //   res.send(result)
 // })
+// odffer data collect  for guest
+app.get("/offerd/email/:email", async (req, res) => {
+  const email = req.params.email;
+  const query = { 'offerProperty.buyeremail': email };
+  const result = await offerdCollection.find(query).toArray();
+  res.send(result);
+});
+// offer data for payment 
+app.get("/offerd/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await offerdCollection.findOne(query); 
+  res.send(result);
+});
+
 // offfer post
 app.post("/offerd",async (req,res)=>{
   const property = req.body;
   const result = await offerdCollection.insertOne(property)
+  res.send(result)
+})
+// offerd get for agent
+app.get('/offerd', async (req, res) => {
+  const result = await offerdCollection.find().toArray()
   res.send(result)
 })
 // wishlist update
