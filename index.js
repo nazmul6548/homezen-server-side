@@ -1,5 +1,6 @@
 const express = require('express')
 require('dotenv').config()
+const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY)
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
 const cookieParser = require('cookie-parser');
@@ -8,7 +9,7 @@ const { MongoClient, ServerApiVersion, ObjectId, Timestamp } = require('mongodb'
 const port = process.env.PORT || 5000
 // middleware
 const corsOptions = {
-    origin: [ 'http://localhost:5177'],
+    origin: [ 'http://localhost:5174'],
     credentials: true,
     optionSuccessStatus: 200,
   }
@@ -53,6 +54,7 @@ const verifyToken = async (req, res, next) => {
      const wishlistCollection = client.db("realEstatePlatform").collection("wishlist")
      const userCollection = client.db("realEstatePlatform").collection("users")
      const offerdCollection = client.db("realEstatePlatform").collection("offerd")
+     const paymentCollection = client.db("realEstatePlatform").collection("payment")
 // 
 // verify admin
 // const verifyAdmin = async (req, res, next) => {
@@ -103,7 +105,28 @@ const verifyToken = async (req, res, next) => {
 //   const result = await wishlistCollection.find().toArray()
 //   res.send(result)
 // })
-// odffer data collect  for guest
+// payment intent
+app.post("/create-payment-intent",async (req,res)=>{
+  const {price} = req.body;
+  const amount = parseInt(price * 100)
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount:amount,
+    currency:'usd',
+    payment_method_types:['card']
+  });
+  res.send({
+    clientSecret:paymentIntent.client_secret,
+  })
+})
+// payment post
+app.post("/payment", async (req, res) => {
+  const property = req.body;
+  // console.log(property);
+  const result = await paymentCollection.insertOne(property);
+  res.send(result);
+});
+// offerd data collect  for guest
 app.get("/offerd/email/:email", async (req, res) => {
   const email = req.params.email;
   const query = { 'offerProperty.buyeremail': email };
