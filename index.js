@@ -9,7 +9,7 @@ const { MongoClient, ServerApiVersion, ObjectId, Timestamp } = require('mongodb'
 const port = process.env.PORT || 5000
 // middleware
 const corsOptions = {
-    origin: [ 'http://localhost:5174'],
+    origin: [ 'http://localhost:5173'],
     credentials: true,
     optionSuccessStatus: 200,
   }
@@ -126,6 +126,11 @@ app.post("/payment", async (req, res) => {
   const result = await paymentCollection.insertOne(property);
   res.send(result);
 });
+// sold property
+app.get('/payment', async (req, res) => {
+  const result = await paymentCollection.find().toArray()
+  res.send(result)
+})
 // offerd data collect  for guest
 app.get("/offerd/email/:email", async (req, res) => {
   const email = req.params.email;
@@ -306,18 +311,7 @@ app.put('/user',async (req,res) => {
         const result = await houseCollection.find(query).toArray();
         res.send(result);
     })
-// update housse
-// app.get("/house/:id", async (req, res) => {
-//   const id = req.params.id;
 
-
-//   const query = { _id: new ObjectId(id) };
-  
-//     const result = await houseCollection.findOne(query);
-    
-//     res.send(result);
-  
-// });
     // delete add properties
     app.delete("/myaddedhouse/:id", async (req, res) => {
         const id = req.params.id;
